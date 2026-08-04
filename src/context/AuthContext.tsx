@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncUsuario } from '../services/api';
+import { getLoginErrorMessage, getRegisterErrorMessage } from '../utils/authErrors';
 
 export interface AuthUser {
   sub: string;
@@ -63,22 +64,27 @@ try {
   };
 
 const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch(`https://${AUTH0_DOMAIN}/oauth/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        grant_type: 'password',
-        username: email,
-        password,
-        audience: AUTH0_AUDIENCE,
-        scope: 'openid profile email',
-        client_id: AUTH0_CLIENT_ID,
-      }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`https://${AUTH0_DOMAIN}/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grant_type: 'password',
+          username: email,
+          password,
+          audience: AUTH0_AUDIENCE,
+          scope: 'openid profile email',
+          client_id: AUTH0_CLIENT_ID,
+        }),
+      });
+    } catch (e) {
+      throw new Error(getLoginErrorMessage(e));
+    }
 
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error_description ?? 'Credenciales incorrectas');
+      const err = await res.json().catch(() => ({}));
+      throw new Error(getLoginErrorMessage(err));
     }
 
     const data = await res.json();
@@ -87,22 +93,26 @@ const login = useCallback(async (email: string, password: string) => {
   }, []);
 
   const register = useCallback(async (email: string, password: string, name: string) => {
-    const res = await fetch(`https://${AUTH0_DOMAIN}/dbconnections/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: AUTH0_CLIENT_ID,
-        email,
-        password,
-        connection: 'Username-Password-Authentication',
-        name,
-      }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`https://${AUTH0_DOMAIN}/dbconnections/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: AUTH0_CLIENT_ID,
+          email,
+          password,
+          connection: 'Username-Password-Authentication',
+          name,
+        }),
+      });
+    } catch (e) {
+      throw new Error(getRegisterErrorMessage(e));
+    }
 
-if (!res.ok) {
-      const err = await res.json();
-      console.log('Error registro Auth0:', JSON.stringify(err));
-      throw new Error(err.description ?? err.message ?? 'No pudimos crear tu cuenta');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(getRegisterErrorMessage(err));
     }
 
     await login(email, password);
