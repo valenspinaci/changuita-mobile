@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
-    ScrollView, ActivityIndicator, Alert, RefreshControl,
+    ScrollView, ActivityIndicator, RefreshControl,
     Modal, FlatList, Switch, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { showAlert } from '../../utils/alert';
 import { useEmprendimiento } from '../../context/EmprendimientoContext';
-import { getVentas, crearVenta, getProductos, getClientes } from '../../services/api';
+import { getVentas, crearVenta, crearPedido, actualizarEstadoVenta, getProductos, getClientes } from '../../services/api';
 import { colors, spacing, radius, shadow, typography } from '../../theme';
 
 interface Venta {
@@ -95,6 +96,7 @@ export default function VentasScreen({ onNavigate }: { onNavigate?: (key: string
     const [esPedido, setEsPedido] = useState(false);
     const [guardando, setGuardando] = useState(false);
     const [showClienteModal, setShowClienteModal] = useState(false);
+    const [marcandoId, setMarcandoId] = useState<number | null>(null);
 
     const cargar = useCallback(async () => {
         if (!emprendimientoActivo) return;
@@ -108,7 +110,7 @@ export default function VentasScreen({ onNavigate }: { onNavigate?: (key: string
             setProductos(p);
             setClientes(c);
         } catch (err: any) {
-            Alert.alert('Error', err.message ?? 'No pudimos cargar las ventas');
+            showAlert('Error', err.message ?? 'No pudimos cargar las ventas');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -143,45 +145,67 @@ export default function VentasScreen({ onNavigate }: { onNavigate?: (key: string
     );
 
     const handleGuardar = async () => {
-        if (carrito.length === 0) { Alert.alert('Error', 'Agregá al menos un producto'); return; }
+        if (carrito.length === 0) { showAlert('Error', 'Agregá al menos un producto'); return; }
         if (!emprendimientoActivo) return;
         setGuardando(true);
     try {
       // Verificar que todos los productos tienen variante
-      const detallesConVariante = carrito.map(i => {
-        const varianteId = i.producto.variantes?.[0]?.id;
-        if (!varianteId) throw new Error(`El producto "${i.producto.nombre}" no tiene variantes configuradas`);
-        return {
-          varianteId,
-          cantidad: i.cantidad,
-          precioUnitario: Number(i.producto.precio),
-        };
+      carrito.forEach(i => {
+        if (!i.producto.variantes?.[0]?.id) {
+          throw new Error(`El producto "${i.producto.nombre}" no tiene variantes configuradas`);
+        }
       });
 
-      await crearVenta(emprendimientoActivo.id, {
-                total: totalCarrito,
-                estado: cobrado ? 'COBRADA' : 'PENDIENTE',
-                medioPago: cobrado ? medioPago : undefined,
-                clienteId: clienteSeleccionado?.id ?? undefined,
-                esPedido,
-                fecha: new Date().toISOString(),
-                detalles: carrito.map(i => ({
-          varianteId: i.producto.variantes?.[0]?.id,
-          cantidad: i.cantidad,
-          precioUnitario: Number(i.producto.precio),
-        })),
-            });
+      const detalles = carrito.map(i => ({
+        varianteId: i.producto.variantes![0].id,
+        cantidad: i.cantidad,
+        precioUnitario: Number(i.producto.precio),
+      }));
+
+      if (esPedido) {
+        // Un pedido es una orden a futuro: no descuenta stock ni pide
+        // estado/medio de pago, por eso va al módulo de Pedidos en vez de Ventas.
+        await crearPedido(emprendimientoActivo.id, {
+          clienteId: clienteSeleccionado?.id ?? undefined,
+          detalles,
+        });
+      } else {
+        await crearVenta(emprendimientoActivo.id, {
+          total: totalCarrito,
+          estado: cobrado ? 'COBRADA' : 'PENDIENTE',
+          medioPago: cobrado ? medioPago : undefined,
+          clienteId: clienteSeleccionado?.id ?? undefined,
+          fecha: new Date().toISOString(),
+          detalles,
+        });
+      }
             setCarrito([]);
             setClienteSeleccionado(null);
             setCobrado(false);
             setMedioPago('efectivo');
-            setEsPedido(false);
             setShowForm(false);
+            if (esPedido) {
+                showAlert('Pedido creado', 'Lo vas a encontrar en la sección Pedidos.');
+            }
+            setEsPedido(false);
             cargar();
         } catch (err: any) {
-            Alert.alert('Error', err.message ?? 'No pudimos registrar la venta');
+            showAlert('Error', err.message ?? (esPedido ? 'No pudimos crear el pedido' : 'No pudimos registrar la venta'));
         } finally {
             setGuardando(false);
+        }
+    };
+
+    const handleMarcarCobrada = async (venta: Venta) => {
+        if (!emprendimientoActivo) return;
+        setMarcandoId(venta.id);
+        try {
+            await actualizarEstadoVenta(emprendimientoActivo.id, venta.id, 'COBRADA');
+            cargar();
+        } catch (err: any) {
+            showAlert('Error', err.message ?? 'No pudimos marcar la venta como cobrada');
+        } finally {
+            setMarcandoId(null);
         }
     };
 
@@ -459,6 +483,18 @@ export default function VentasScreen({ onNavigate }: { onNavigate?: (key: string
                                                 {esCobrada ? 'COBRADA' : 'PEND'}
                                             </Text>
                                         </View>
+                                        {!esCobrada && (
+                                            <TouchableOpacity
+                                                onPress={() => handleMarcarCobrada(v)}
+                                                disabled={marcandoId === v.id}
+                                                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                                            >
+                                                {marcandoId === v.id
+                                                    ? <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
+                                                    : <Text style={s.marcarCobradaText}>Marcar cobrada</Text>
+                                                }
+                                            </TouchableOpacity>
+                                        )}
                                     </View>
                                     <Text style={[s.ventaTotal, { flex: 1, textAlign: 'right' }]}>
                                         {formatMonto(v.total)}
@@ -500,7 +536,7 @@ export default function VentasScreen({ onNavigate }: { onNavigate?: (key: string
                                         setObjetivoMensual(val);
                                         setEditandoObjetivo(false);
                                     } else {
-                                        Alert.alert('Error', 'Ingresá un monto válido');
+                                        showAlert('Error', 'Ingresá un monto válido');
                                     }
                                 }}
                                 activeOpacity={0.85}
@@ -725,6 +761,7 @@ const s = StyleSheet.create({
     ventaSku: { fontSize: 11, color: colors.textSecondary, marginTop: 1 },
     estadoBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.full },
     estadoBadgeText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.3 },
+    marcarCobradaText: { fontSize: 10, color: colors.primary, fontWeight: '600', marginTop: 4, textDecorationLine: 'underline' },
     ventaTotal: { fontSize: 14, fontWeight: '600', color: colors.text },
     mostrando: { ...typography.caption, textAlign: 'center', marginTop: spacing.lg },
 

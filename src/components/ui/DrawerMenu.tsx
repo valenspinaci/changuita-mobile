@@ -1,19 +1,19 @@
 import React, { useEffect, useRef } from 'react';
 import {
     View, Text, TouchableOpacity, StyleSheet, Animated,
-    Dimensions, TouchableWithoutFeedback, SafeAreaView,
+    useWindowDimensions, TouchableWithoutFeedback, SafeAreaView,
 } from 'react-native';
 import { ChanguitaLogo } from './ChanguitaLogo';
 import {
     NegocioIcon, VentasIcon, PedidosIcon,
     GastosIcon, ClientesIcon, StockIcon,
+    CloseIcon, PerfilIcon,
 } from './Icons';
 import { colors, spacing, typography } from '../../theme';
 import { useAuth } from '../../hooks/useAuth';
 import { useEmprendimiento } from '../../context/EmprendimientoContext';
 
-const { width } = Dimensions.get('window');
-const DRAWER_WIDTH = width * 0.78;
+const MAX_DRAWER_WIDTH = 320;
 
 interface MenuItem {
     key: string;
@@ -28,6 +28,7 @@ const MENU_ITEMS: MenuItem[] = [
     { key: 'gastos', label: 'Gastos', icon: (a) => <GastosIcon color={a ? colors.white : colors.primary} /> },
     { key: 'clientes', label: 'Clientes', icon: (a) => <ClientesIcon color={a ? colors.white : colors.primary} /> },
     { key: 'stock', label: 'Stock', icon: (a) => <StockIcon color={a ? colors.white : colors.primary} /> },
+    { key: 'perfil', label: 'Perfil', icon: (a) => <PerfilIcon color={a ? colors.white : colors.primary} /> },
 ];
 
 interface Props {
@@ -38,7 +39,9 @@ interface Props {
 }
 
 export function DrawerMenu({ visible, activeKey, onClose, onNavigate }: Props) {
-    const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+    const { width: windowWidth } = useWindowDimensions();
+    const drawerWidth = Math.min(windowWidth * 0.78, MAX_DRAWER_WIDTH);
+    const slideAnim = useRef(new Animated.Value(-drawerWidth)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const { logout } = useAuth();
     const { emprendimientoActivo } = useEmprendimiento();
@@ -51,11 +54,11 @@ export function DrawerMenu({ visible, activeKey, onClose, onNavigate }: Props) {
             ]).start();
         } else {
             Animated.parallel([
-                Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 200, useNativeDriver: true }),
+                Animated.timing(slideAnim, { toValue: -drawerWidth, duration: 200, useNativeDriver: true }),
                 Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
             ]).start();
         }
-    }, [visible]);
+    }, [visible, drawerWidth]);
 
     if (!visible) return null;
 
@@ -69,11 +72,20 @@ export function DrawerMenu({ visible, activeKey, onClose, onNavigate }: Props) {
             </Animated.View>
 
             {/* Panel lateral */}
-            <Animated.View style={[s.drawer, { transform: [{ translateX: slideAnim }] }]}>
+            <Animated.View style={[s.drawer, { width: drawerWidth, transform: [{ translateX: slideAnim }] }]}>
                 <SafeAreaView style={s.drawerInner}>
-                    {/* Logo + emprendimiento */}
+                    {/* Logo + emprendimiento + cerrar */}
                     <View style={s.drawerHeader}>
-                        <ChanguitaLogo size={32} />
+                        <View style={s.drawerHeaderTop}>
+                            <ChanguitaLogo size={32} />
+                            <TouchableOpacity
+                                onPress={onClose}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                activeOpacity={0.7}
+                            >
+                                <CloseIcon color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
                         {emprendimientoActivo && (
                             <Text style={s.emprendimientoNombre} numberOfLines={1}>
                                 {emprendimientoActivo.nombre}
@@ -127,7 +139,6 @@ const s = StyleSheet.create({
     },
     backdropTouch: { flex: 1 },
     drawer: {
-        width: DRAWER_WIDTH,
         backgroundColor: colors.white,
         shadowColor: '#000',
         shadowOffset: { width: 4, height: 0 },
@@ -143,6 +154,11 @@ const s = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
         gap: spacing.sm,
+    },
+    drawerHeaderTop: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
     emprendimientoNombre: {
         ...typography.caption,

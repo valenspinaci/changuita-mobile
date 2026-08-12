@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   SafeAreaView, KeyboardAvoidingView, Platform, ScrollView,
-  ActivityIndicator, Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { showAlert } from '../../utils/alert';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
 import { ChanguitaLogo } from '../../components/ui/ChanguitaLogo';
@@ -70,7 +71,7 @@ export default function RegisterScreen({ navigation }: Props) {
     try {
       await register(email.trim().toLowerCase(), password, nombre.trim());
     } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'No pudimos crear tu cuenta. Intentá de nuevo.');
+      showAlert('Error', err.message ?? 'No pudimos crear tu cuenta. Intentá de nuevo.');
     } finally {
       setLoading(false);
     }

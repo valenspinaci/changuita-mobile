@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   SafeAreaView, KeyboardAvoidingView, Platform, ScrollView,
-  ActivityIndicator, Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { showAlert } from '../../utils/alert';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChanguitaLogo } from '../../components/ui/ChanguitaLogo';
 import { MailIcon } from '../../components/ui/Icons';
@@ -39,7 +40,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
       if (!res.ok) throw new Error('No pudimos enviar el correo');
       setSent(true);
     } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Intentá de nuevo.');
+      showAlert('Error', err.message ?? 'Intentá de nuevo.');
     } finally {
       setLoading(false);
     }

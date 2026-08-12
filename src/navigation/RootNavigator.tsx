@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator, SafeAreaView } from 'react-native';
+import { View, ActivityIndicator, SafeAreaView, Text, TouchableOpacity } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../hooks/useAuth';
 import { useEmprendimiento } from '../context/EmprendimientoContext';
@@ -12,19 +12,37 @@ import { DrawerMenu } from '../components/ui/DrawerMenu';
 import { colors } from '../theme';
 import VentasScreen from '../screens/ventas/VentasScreen';
 import StockScreen from '../screens/stock/StockScreen';
+import ClientesScreen from '../screens/clientes/ClientesScreen';
+import PedidosScreen from '../screens/pedidos/PedidosScreen';
+import MiNegocioScreen from '../screens/negocio/MiNegocioScreen';
+import PerfilScreen from '../screens/perfil/PerfilScreen';
 
 
 const Stack = createNativeStackNavigator();
 
 function AppContent() {
-  const { emprendimientoActivo, loading } = useEmprendimiento();
+  const { emprendimientoActivo, loading, error, recargar } = useEmprendimiento();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [activeScreen, setActiveScreen] = useState('gastos');
+  const [activeScreen, setActiveScreen] = useState('negocio');
 
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
         <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (error && !emprendimientoActivo) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, padding: 24, gap: 16 }}>
+        <Text style={{ fontSize: 15, color: colors.text, textAlign: 'center' }}>{error}</Text>
+        <TouchableOpacity
+          onPress={recargar}
+          style={{ backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24 }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Reintentar</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -35,10 +53,14 @@ function AppContent() {
 
 const renderScreen = () => {
     switch (activeScreen) {
+      case 'negocio': return <MiNegocioScreen onNavigate={setActiveScreen} />;
       case 'ventas': return <VentasScreen onNavigate={setActiveScreen} />;
+      case 'pedidos': return <PedidosScreen />;
       case 'gastos': return <GastosScreen />;
+      case 'clientes': return <ClientesScreen />;
       case 'stock': return <StockScreen />;
-      default: return <GastosScreen />;
+      case 'perfil': return <PerfilScreen />;
+      default: return <MiNegocioScreen onNavigate={setActiveScreen} />;
     }
   };
 

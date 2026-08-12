@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { syncUsuario } from '../services/api';
+import { syncUsuario, setOnUnauthorized } from '../services/api';
 import { getLoginErrorMessage, getRegisterErrorMessage } from '../utils/authErrors';
 
 export interface AuthUser {
@@ -17,6 +17,7 @@ export interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateNombre: (nombre: string) => Promise<void>;
 }
 
 const AUTH0_DOMAIN = process.env.EXPO_PUBLIC_AUTH0_DOMAIN ?? '';
@@ -125,8 +126,23 @@ const login = useCallback(async (email: string, password: string) => {
     setUser(null);
   }, []);
 
+  useEffect(() => {
+    // Si el backend rechaza el token (sesión vencida), desloguear
+    // automáticamente en vez de dejar a la app trabada en un error.
+    setOnUnauthorized(() => logout());
+  }, [logout]);
+
+  const updateNombre = useCallback(async (nombre: string) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, name: nombre };
+      AsyncStorage.setItem(USER_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateNombre }}>
       {children}
     </AuthContext.Provider>
   );

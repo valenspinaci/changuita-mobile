@@ -7,6 +7,13 @@ async function getToken(): Promise<string | null> {
     return AsyncStorage.getItem(TOKEN_KEY);
 }
 
+// La app registra acá un callback (en AuthContext) para desloguear
+// automáticamente cuando el backend rechaza el token (sesión vencida).
+let onUnauthorized: (() => void) | null = null;
+export function setOnUnauthorized(fn: () => void) {
+    onUnauthorized = fn;
+}
+
 async function request<T>(method: string, path: string, body?: object): Promise<T> {
     const token = await getToken();
     console.log(`[API] ${method} ${API_URL}${path}`);
@@ -21,8 +28,12 @@ async function request<T>(method: string, path: string, body?: object): Promise<
     });
 
     if (!res.ok) {
+        if (res.status === 401) {
+            onUnauthorized?.();
+            throw new Error('Tu sesión expiró. Iniciá sesión de nuevo.');
+        }
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message ?? `Error ${res.status}`);
+        throw new Error(err.error ?? err.message ?? `Error ${res.status}`);
     }
 
     return res.json();
@@ -34,6 +45,9 @@ export const getMisEmprendimientos = () =>
 
 export const crearEmprendimiento = (data: { nombre: string; descripcion?: string }) =>
     request<any>('POST', '/emprendimientos', data);
+
+export const actualizarEmprendimiento = (id: number, data: { nombre?: string; descripcion?: string }) =>
+    request<any>('PUT', `/emprendimientos/${id}`, data);
 
 // ── Gastos ────────────────────────────────────────────────────────────────────
 export const getGastos = (emprendimientoId: number) =>
@@ -58,12 +72,21 @@ export const crearVenta = (emprendimientoId: number, data: object) => {
     return request<any>('POST', `/emprendimientos/${emprendimientoId}/ventas`, data);
 };
 
+export const actualizarEstadoVenta = (emprendimientoId: number, id: number, estado: string) =>
+    request<any>('PATCH', `/emprendimientos/${emprendimientoId}/ventas/${id}/estado`, { estado });
+
 // ── Productos ─────────────────────────────────────────────────────────────────
 export const getProductos = (emprendimientoId: number) =>
     request<any[]>('GET', `/emprendimientos/${emprendimientoId}/productos?includeVariantes=true`);
 
 export const crearProducto = (emprendimientoId: number, data: object) =>
     request<any>('POST', `/emprendimientos/${emprendimientoId}/productos`, data);
+
+export const actualizarProducto = (emprendimientoId: number, id: number, data: object) =>
+    request<any>('PUT', `/emprendimientos/${emprendimientoId}/productos/${id}`, data);
+
+export const eliminarProducto = (emprendimientoId: number, id: number) =>
+    request<any>('DELETE', `/emprendimientos/${emprendimientoId}/productos/${id}`);
 
 export const syncUsuario = async (token: string) => {
     const url = `${API_URL}/auth/sync`;
@@ -79,8 +102,48 @@ export const syncUsuario = async (token: string) => {
     return data;
 };
 
+// ── Perfil ────────────────────────────────────────────────────────────────────
+export const actualizarPerfil = (nombre: string) =>
+    request<any>('PUT', '/auth/me', { nombre });
+
 export const getClientes = (emprendimientoId: number) =>
     request<any[]>('GET', `/emprendimientos/${emprendimientoId}/clientes`);
 
+export const crearCliente = (emprendimientoId: number, data: {
+    nombre: string;
+    email?: string;
+    telefono?: string;
+    direccion?: string;
+    notas?: string;
+}) => request<any>('POST', `/emprendimientos/${emprendimientoId}/clientes`, data);
+
+export const actualizarCliente = (emprendimientoId: number, id: number, data: {
+    nombre: string;
+    email?: string;
+    telefono?: string;
+    direccion?: string;
+    notas?: string;
+}) => request<any>('PUT', `/emprendimientos/${emprendimientoId}/clientes/${id}`, data);
+
+export const eliminarCliente = (emprendimientoId: number, id: number) =>
+    request<any>('DELETE', `/emprendimientos/${emprendimientoId}/clientes/${id}`);
+
 export const crearCategoriaGasto = (emprendimientoId: number, data: { nombre: string }) =>
     request<any>('POST', `/emprendimientos/${emprendimientoId}/categorias-gasto`, data);
+
+// ── Pedidos ───────────────────────────────────────────────────────────────────
+export const getPedidos = (emprendimientoId: number) =>
+    request<any[]>('GET', `/emprendimientos/${emprendimientoId}/pedidos`);
+
+export const crearPedido = (emprendimientoId: number, data: {
+    clienteId?: number;
+    fechaEstimada?: string;
+    notas?: string;
+    detalles: { varianteId: number; cantidad: number; precioUnitario: number }[];
+}) => request<any>('POST', `/emprendimientos/${emprendimientoId}/pedidos`, data);
+
+export const actualizarEstadoPedido = (emprendimientoId: number, id: number, estado: string) =>
+    request<any>('PATCH', `/emprendimientos/${emprendimientoId}/pedidos/${id}/estado`, { estado });
+
+export const cancelarPedido = (emprendimientoId: number, id: number) =>
+    request<any>('DELETE', `/emprendimientos/${emprendimientoId}/pedidos/${id}`);

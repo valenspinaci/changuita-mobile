@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
-    ScrollView, ActivityIndicator, Alert, RefreshControl, Modal,
+    ScrollView, ActivityIndicator, RefreshControl, Modal,
 } from 'react-native';
+import { showAlert } from '../../utils/alert';
 import { useEmprendimiento } from '../../context/EmprendimientoContext';
-import { getProductos, crearProducto } from '../../services/api';
+import { getProductos, crearProducto, actualizarProducto, eliminarProducto } from '../../services/api';
 import { colors, spacing, radius, shadow, typography } from '../../theme';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -46,6 +47,8 @@ export default function StockScreen() {
     const [busqueda, setBusqueda] = useState('');
     const [categoriaActiva, setCategoriaActiva] = useState('Todos');
     const [showForm, setShowForm] = useState(false);
+    const [editandoId, setEditandoId] = useState<number | null>(null);
+    const [menuProducto, setMenuProducto] = useState<Producto | null>(null);
 
     // Form state
     const [nombre, setNombre] = useState('');
@@ -60,7 +63,7 @@ export default function StockScreen() {
             const data = await getProductos(emprendimientoActivo.id);
             setProductos(data);
         } catch (err: any) {
-            Alert.alert('Error', err.message ?? 'No pudimos cargar los productos');
+            showAlert('Error', err.message ?? 'No pudimos cargar los productos');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -71,28 +74,70 @@ export default function StockScreen() {
 
     const onRefresh = () => { setRefreshing(true); cargar(); };
 
+    const limpiarForm = () => {
+        setNombre(''); setPrecio(''); setStock(''); setStockMinimo('5');
+        setEditandoId(null);
+    };
+
+    const abrirEdicion = (p: Producto) => {
+        setNombre(p.nombre);
+        setPrecio(String(p.precio));
+        setStock(String(p.stockTotal));
+        setStockMinimo(String(p.stockMinimo));
+        setEditandoId(p.id);
+        setMenuProducto(null);
+        setShowForm(true);
+    };
+
     const handleGuardar = async () => {
-        if (!nombre.trim()) { Alert.alert('Error', 'El nombre es obligatorio'); return; }
-        if (!precio || isNaN(Number(precio))) { Alert.alert('Error', 'Ingresá un precio válido'); return; }
-        if (!stock || isNaN(Number(stock))) { Alert.alert('Error', 'Ingresá el stock inicial'); return; }
+        if (!nombre.trim()) { showAlert('Error', 'El nombre es obligatorio'); return; }
+        if (!precio || isNaN(Number(precio))) { showAlert('Error', 'Ingresá un precio válido'); return; }
+        if (!stock || isNaN(Number(stock))) { showAlert('Error', 'Ingresá el stock inicial'); return; }
         if (!emprendimientoActivo) return;
 
         setGuardando(true);
         try {
-            await crearProducto(emprendimientoActivo.id, {
+            const data = {
                 nombre: nombre.trim(),
                 precio: Number(precio),
                 stockTotal: Number(stock),
                 stockMinimo: Number(stockMinimo),
-            });
-            setNombre(''); setPrecio(''); setStock(''); setStockMinimo('5');
+            };
+            if (editandoId) {
+                await actualizarProducto(emprendimientoActivo.id, editandoId, data);
+            } else {
+                await crearProducto(emprendimientoActivo.id, data);
+            }
+            limpiarForm();
             setShowForm(false);
             cargar();
         } catch (err: any) {
-            Alert.alert('Error', err.message ?? 'No pudimos crear el producto');
+            showAlert('Error', err.message ?? 'No pudimos guardar el producto');
         } finally {
             setGuardando(false);
         }
+    };
+
+    const handleEliminar = (p: Producto) => {
+        showAlert(
+            'Eliminar producto',
+            `¿Seguro que querés eliminar "${p.nombre}"?`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Eliminar', style: 'destructive', onPress: async () => {
+                        if (!emprendimientoActivo) return;
+                        try {
+                            await eliminarProducto(emprendimientoActivo.id, p.id);
+                            setMenuProducto(null);
+                            cargar();
+                        } catch (err: any) {
+                            showAlert('Error', err.message ?? 'No pudimos eliminar el producto');
+                        }
+                    },
+                },
+            ],
+        );
     };
 
     // Categorías dinámicas
@@ -129,8 +174,12 @@ export default function StockScreen() {
                         <Text style={s.heading}>Productos y Stock</Text>
                         <Text style={s.sub}>Administrá tu inventario y precios</Text>
                     </View>
-                    <TouchableOpacity style={s.addBtn} onPress={() => setShowForm(v => !v)} activeOpacity={0.85}>
-                        <Text style={s.addBtnText}>+</Text>
+                    <TouchableOpacity
+                        style={s.addBtn}
+                        onPress={() => { if (showForm) limpiarForm(); setShowForm(v => !v); }}
+                        activeOpacity={0.85}
+                    >
+                        <Text style={s.addBtnText}>{showForm ? '✕' : '+'}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -173,7 +222,7 @@ export default function StockScreen() {
                 {/* Formulario nuevo producto */}
                 {showForm && (
                     <View style={s.formCard}>
-                        <Text style={s.formTitle}>Nuevo Producto</Text>
+                        <Text style={s.formTitle}>{editandoId ? 'Editar Producto' : 'Nuevo Producto'}</Text>
 
                         <Text style={s.fieldLabel}>NOMBRE</Text>
                         <TextInput style={s.textInput} placeholder="Ej: Leche Entera 1L"
@@ -201,7 +250,7 @@ export default function StockScreen() {
                         >
                             {guardando
                                 ? <ActivityIndicator color="#fff" />
-                                : <Text style={s.guardarBtnText}>Guardar Producto</Text>
+                                : <Text style={s.guardarBtnText}>{editandoId ? 'Guardar Cambios' : 'Guardar Producto'}</Text>
                             }
                         </TouchableOpacity>
                     </View>
@@ -232,7 +281,11 @@ export default function StockScreen() {
                                             <Text style={s.productoNombre} numberOfLines={1}>{p.nombre}</Text>
                                             <Text style={s.productoRef}>{ref}</Text>
                                         </View>
-                                        <TouchableOpacity style={s.menuBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                        <TouchableOpacity
+                                            style={s.menuBtn}
+                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            onPress={() => setMenuProducto(p)}
+                                        >
                                             <Text style={s.menuBtnText}>•••</Text>
                                         </TouchableOpacity>
                                     </View>
@@ -253,6 +306,28 @@ export default function StockScreen() {
                     )}
                 </View>
             </ScrollView>
+
+            {/* Menú editar/eliminar */}
+            <Modal visible={!!menuProducto} transparent animationType="slide">
+                <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setMenuProducto(null)}>
+                    <TouchableOpacity activeOpacity={1} style={s.modalSheet}>
+                        {menuProducto && (
+                            <>
+                                <Text style={s.modalTitle}>{menuProducto.nombre}</Text>
+                                <TouchableOpacity style={s.editarBtn} onPress={() => abrirEdicion(menuProducto)} activeOpacity={0.85}>
+                                    <Text style={s.editarBtnText}>Editar</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={s.eliminarBtn} onPress={() => handleEliminar(menuProducto)} activeOpacity={0.85}>
+                                    <Text style={s.eliminarBtnText}>Eliminar</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={s.modalCancel} onPress={() => setMenuProducto(null)}>
+                                    <Text style={s.modalCancelText}>Cerrar</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </TouchableOpacity>
+            </Modal>
         </View>
     );
 }
@@ -354,4 +429,28 @@ const s = StyleSheet.create({
     badgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
     precio: { ...typography.bodySecondary },
     precioValue: { fontWeight: '600', color: colors.text },
+
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+    modalSheet: {
+        backgroundColor: colors.white,
+        borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg,
+        padding: spacing.lg,
+    },
+    modalTitle: { ...typography.h4, marginBottom: spacing.md },
+    editarBtn: {
+        height: 48, alignItems: 'center', justifyContent: 'center',
+        borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.primary,
+        marginBottom: spacing.sm,
+    },
+    editarBtnText: { color: colors.primary, fontSize: 15, fontWeight: '600' },
+    eliminarBtn: {
+        height: 48, alignItems: 'center', justifyContent: 'center',
+        borderRadius: radius.md, backgroundColor: colors.errorLight,
+    },
+    eliminarBtnText: { color: colors.error, fontSize: 15, fontWeight: '600' },
+    modalCancel: {
+        marginTop: spacing.md, height: 48, alignItems: 'center', justifyContent: 'center',
+        borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border,
+    },
+    modalCancelText: { fontSize: 15, color: colors.textSecondary, fontWeight: '500' },
 });

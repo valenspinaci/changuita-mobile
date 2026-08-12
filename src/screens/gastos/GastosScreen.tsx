@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
-    ScrollView, ActivityIndicator, Alert, RefreshControl,
+    ScrollView, ActivityIndicator, RefreshControl,
     Modal, FlatList, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { showAlert } from '../../utils/alert';
 import { useEmprendimiento } from '../../context/EmprendimientoContext';
 import { getGastos, crearGasto, getCategoriasGasto, crearCategoriaGasto } from '../../services/api';
 import { colors, spacing, radius, shadow, typography } from '../../theme';
@@ -75,7 +76,7 @@ export default function GastosScreen() {
             setGastos(g);
             setCategorias(c);
         } catch (err: any) {
-            Alert.alert('Error', err.message ?? 'No pudimos cargar los gastos');
+            showAlert('Error', err.message ?? 'No pudimos cargar los gastos');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -87,7 +88,7 @@ export default function GastosScreen() {
 
     const handleCrearCategoria = async () => {
         if (!nuevaCategoria.trim()) {
-            Alert.alert('Error', 'Ingresá un nombre para la categoría');
+            showAlert('Error', 'Ingresá un nombre para la categoría');
             return;
         }
         if (!emprendimientoActivo) return;
@@ -102,7 +103,7 @@ export default function GastosScreen() {
             setShowNuevaCat(false);
             setShowCatModal(false);
         } catch (err: any) {
-            Alert.alert('Error', err.message ?? 'No pudimos crear la categoría');
+            showAlert('Error', err.message ?? 'No pudimos crear la categoría');
         } finally {
             setCreandoCategoria(false);
         }
@@ -110,10 +111,10 @@ export default function GastosScreen() {
 
     const handleGuardar = async () => {
         if (!monto || isNaN(Number(monto))) {
-            Alert.alert('Error', 'Ingresá un monto válido'); return;
+            showAlert('Error', 'Ingresá un monto válido'); return;
         }
         if (!descripcion.trim()) {
-            Alert.alert('Error', 'Ingresá una descripción'); return;
+            showAlert('Error', 'Ingresá una descripción'); return;
         }
         if (!emprendimientoActivo) return;
 
@@ -132,7 +133,7 @@ export default function GastosScreen() {
             setShowForm(false);
             cargar();
         } catch (err: any) {
-            Alert.alert('Error', err.message ?? 'No pudimos registrar el gasto');
+            showAlert('Error', err.message ?? 'No pudimos registrar el gasto');
         } finally {
             setGuardando(false);
         }

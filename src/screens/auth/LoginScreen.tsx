@@ -10,8 +10,8 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
+import { showAlert } from '../../utils/alert';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
 import { ChanguitaLogo } from '../../components/ui/ChanguitaLogo';
@@ -47,7 +47,7 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       await login(email.trim().toLowerCase(), password);
     } catch (err: any) {
-      Alert.alert('Error al ingresar', err.message ?? 'Revisá tus datos e intentá de nuevo.');
+      showAlert('Error al ingresar', err.message ?? 'Revisá tus datos e intentá de nuevo.');
     } finally {
       setLoading(false);
     }

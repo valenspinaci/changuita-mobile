@@ -12,6 +12,7 @@ interface EmprendimientoContextValue {
     emprendimientoActivo: Emprendimiento | null;
     emprendimientos: Emprendimiento[];
     loading: boolean;
+    error: string | null;
     setEmprendimientoActivo: (e: Emprendimiento) => void;
     recargar: () => Promise<void>;
 }
@@ -23,6 +24,7 @@ export function EmprendimientoProvider({ children }: { children: React.ReactNode
     const [emprendimientos, setEmprendimientos] = useState<Emprendimiento[]>([]);
     const [emprendimientoActivo, setEmprendimientoActivo] = useState<Emprendimiento | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const recargar = useCallback(async () => {
         if (!user) return;
@@ -30,9 +32,10 @@ export function EmprendimientoProvider({ children }: { children: React.ReactNode
         try {
             const data = await getMisEmprendimientos();
             setEmprendimientos(data);
+            setError(null);
             if (data.length === 1) setEmprendimientoActivo(data[0]);
-        } catch {
-            // ignorar
+        } catch (err: any) {
+            setError(err.message ?? 'No pudimos cargar tus emprendimientos');
         } finally {
             setLoading(false);
         }
@@ -47,6 +50,7 @@ export function EmprendimientoProvider({ children }: { children: React.ReactNode
             emprendimientoActivo,
             emprendimientos,
             loading,
+            error,
             setEmprendimientoActivo,
             recargar,
         }}>

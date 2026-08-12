@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
     SafeAreaView, KeyboardAvoidingView, Platform, ScrollView,
-    ActivityIndicator, Alert,
+    ActivityIndicator,
 } from 'react-native';
+import { showAlert } from '../../utils/alert';
 import { useEmprendimiento, Emprendimiento } from '../../context/EmprendimientoContext';
 import { crearEmprendimiento } from '../../services/api';
 import { ChanguitaLogo } from '../../components/ui/ChanguitaLogo';
@@ -37,7 +38,7 @@ export default function SeleccionEmprendimientoScreen() {
             await recargar();
             setEmprendimientoActivo(nuevo);
         } catch (err: any) {
-            Alert.alert('Error', err.message ?? 'No pudimos crear el emprendimiento');
+            showAlert('Error', err.message ?? 'No pudimos crear el emprendimiento');
         } finally {
             setLoading(false);
         }
