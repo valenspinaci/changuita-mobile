@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator, SafeAreaView, Text, TouchableOpacity } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../hooks/useAuth';
 import { useEmprendimiento } from '../context/EmprendimientoContext';
+import { chequearRecordatorios } from '../utils/notifications';
 import AuthNavigator from './AuthNavigator';
 import GastosScreen from '../screens/gastos/GastosScreen';
 import SeleccionEmprendimientoScreen from '../screens/emprendimiento/CrearEmprendimientoScreen';
@@ -24,6 +25,12 @@ function AppContent() {
   const { emprendimientoActivo, loading, error, recargar } = useEmprendimiento();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeScreen, setActiveScreen] = useState('negocio');
+
+  useEffect(() => {
+    if (emprendimientoActivo) {
+      chequearRecordatorios(emprendimientoActivo.id).catch(() => {});
+    }
+  }, [emprendimientoActivo?.id]);
 
   if (loading) {
     return (

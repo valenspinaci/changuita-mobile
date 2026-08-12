@@ -63,6 +63,9 @@ export const crearGasto = (emprendimientoId: number, data: {
 export const getCategoriasGasto = (emprendimientoId: number) =>
     request<any[]>('GET', `/emprendimientos/${emprendimientoId}/categorias-gasto`);
 
+export const getGastosRecurrentes = (emprendimientoId: number) =>
+    request<any[]>('GET', `/emprendimientos/${emprendimientoId}/gastos-recurrentes`);
+
 // ── Ventas ────────────────────────────────────────────────────────────────────
 export const getVentas = (emprendimientoId: number) =>
     request<any[]>('GET', `/emprendimientos/${emprendimientoId}/ventas`);
