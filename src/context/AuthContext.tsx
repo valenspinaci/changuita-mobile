@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { syncUsuario, setOnUnauthorized } from '../services/api';
+import { syncUsuario, completarOnboarding, setOnUnauthorized } from '../services/api';
 import { getLoginErrorMessage, getRegisterErrorMessage } from '../utils/authErrors';
 
 export interface AuthUser {
@@ -8,6 +8,7 @@ export interface AuthUser {
   email: string;
   name?: string;
   picture?: string;
+  onboardingCompletado?: boolean;
 }
 
 export interface AuthContextValue {
@@ -18,6 +19,7 @@ export interface AuthContextValue {
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   updateNombre: (nombre: string) => Promise<void>;
+  marcarOnboardingCompletado: () => Promise<void>;
 }
 
 const AUTH0_DOMAIN = process.env.EXPO_PUBLIC_AUTH0_DOMAIN ?? '';
@@ -42,6 +44,18 @@ useEffect(() => {
         if (savedToken && savedUser) {
           setToken(savedToken);
           setUser(JSON.parse(savedUser));
+          // Refrescar datos que viven en la cuenta (ej. onboardingCompletado),
+          // por si cambiaron desde otro dispositivo o la web.
+          syncUsuario(savedToken)
+            .then((data) => {
+              setUser(prev => {
+                if (!prev) return prev;
+                const updated = { ...prev, onboardingCompletado: data.onboardingCompletado };
+                AsyncStorage.setItem(USER_KEY, JSON.stringify(updated));
+                return updated;
+              });
+            })
+            .catch(() => {});
         }
       } catch {
         // ignorar
@@ -56,9 +70,12 @@ const saveSession = async (accessToken: string, authUser: AuthUser) => {
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(authUser));
     setToken(accessToken);
     setUser(authUser);
-    // Sincronizar usuario con la DB
+    // Sincronizar usuario con la DB y traer datos que viven ahí (ej. onboardingCompletado)
 try {
-      await syncUsuario(accessToken);
+      const data = await syncUsuario(accessToken);
+      const updated = { ...authUser, onboardingCompletado: data.onboardingCompletado };
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(updated));
+      setUser(updated);
     } catch (e: any) {
       console.log('[sync] error:', e.message);
     }
@@ -141,8 +158,23 @@ const login = useCallback(async (email: string, password: string) => {
     });
   }, []);
 
+  const marcarOnboardingCompletado = useCallback(async () => {
+    try {
+      await completarOnboarding();
+    } catch (e: any) {
+      console.log('[onboarding] error:', e.message);
+      return;
+    }
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, onboardingCompletado: true };
+      AsyncStorage.setItem(USER_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateNombre }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateNombre, marcarOnboardingCompletado }}>
       {children}
     </AuthContext.Provider>
   );

@@ -308,7 +308,7 @@ export default function StockScreen() {
             </ScrollView>
 
             {/* Menú editar/eliminar */}
-            <Modal visible={!!menuProducto} transparent animationType="slide">
+            <Modal visible={!!menuProducto} transparent animationType="fade">
                 <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setMenuProducto(null)}>
                     <TouchableOpacity activeOpacity={1} style={s.modalSheet}>
                         {menuProducto && (

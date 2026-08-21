@@ -105,6 +105,9 @@ export const syncUsuario = async (token: string) => {
     return data;
 };
 
+export const completarOnboarding = () =>
+    request<any>('PATCH', '/auth/onboarding');
+
 // ── Perfil ────────────────────────────────────────────────────────────────────
 export const actualizarPerfil = (nombre: string) =>
     request<any>('PUT', '/auth/me', { nombre });

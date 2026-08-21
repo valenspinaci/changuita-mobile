@@ -11,7 +11,7 @@ import { colors, spacing, radius, shadow, typography } from '../../theme';
 
 export default function PerfilScreen() {
     const { user, logout, updateNombre } = useAuth();
-    const { emprendimientoActivo } = useEmprendimiento();
+    const { emprendimientoActivo, reiniciarOnboarding } = useEmprendimiento();
     const [editando, setEditando] = useState(false);
     const [nombre, setNombre] = useState(user?.name ?? '');
     const [guardando, setGuardando] = useState(false);
@@ -109,6 +109,10 @@ export default function PerfilScreen() {
                     )}
                 </View>
 
+                <TouchableOpacity style={s.tutorialBtn} onPress={reiniciarOnboarding} activeOpacity={0.85}>
+                    <Text style={s.tutorialBtnText}>Ver tutorial de nuevo</Text>
+                </TouchableOpacity>
+
                 <TouchableOpacity style={s.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
                     <Text style={s.logoutBtnText}>Cerrar sesión</Text>
                 </TouchableOpacity>
@@ -167,6 +171,13 @@ const s = StyleSheet.create({
         borderRadius: radius.md, backgroundColor: colors.primary, ...shadow.primary,
     },
     saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+
+    tutorialBtn: {
+        marginHorizontal: spacing.lg, marginBottom: spacing.sm, height: 48,
+        alignItems: 'center', justifyContent: 'center',
+        borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.primary,
+    },
+    tutorialBtnText: { color: colors.primary, fontSize: 15, fontWeight: '600' },
 
     logoutBtn: {
         marginHorizontal: spacing.lg, height: 48,

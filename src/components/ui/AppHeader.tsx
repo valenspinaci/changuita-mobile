@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { ChanguitaLogo } from './ChanguitaLogo';
-import { MenuIcon, BellIcon } from './Icons';
+import { MenuIcon, BellIcon, HelpIcon } from './Icons';
+import { HelpModal } from './HelpModal';
 import { colors, spacing } from '../../theme';
 
 interface Props {
     onMenuPress: () => void;
     onNotificationsPress?: () => void;
+    activeScreen: string;
 }
 
-export function AppHeader({ onMenuPress, onNotificationsPress }: Props) {
+export function AppHeader({ onMenuPress, onNotificationsPress, activeScreen }: Props) {
+    const [showHelp, setShowHelp] = useState(false);
+
     return (
         <View style={s.container}>
             <TouchableOpacity
@@ -22,13 +26,24 @@ export function AppHeader({ onMenuPress, onNotificationsPress }: Props) {
 
             <ChanguitaLogo size={28} />
 
-            <TouchableOpacity
-                style={s.iconBtn}
-                onPress={onNotificationsPress}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-                <BellIcon />
-            </TouchableOpacity>
+            <View style={s.rightGroup}>
+                <TouchableOpacity
+                    style={s.iconBtn}
+                    onPress={() => setShowHelp(true)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                    <HelpIcon />
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={s.iconBtn}
+                    onPress={onNotificationsPress}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                    <BellIcon />
+                </TouchableOpacity>
+            </View>
+
+            <HelpModal visible={showHelp} screenKey={activeScreen} onClose={() => setShowHelp(false)} />
         </View>
     );
 }
@@ -43,6 +58,10 @@ const s = StyleSheet.create({
         backgroundColor: colors.bg,
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
+    },
+    rightGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     iconBtn: {
         width: 40,

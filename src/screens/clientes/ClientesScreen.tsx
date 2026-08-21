@@ -270,7 +270,7 @@ export default function ClientesScreen() {
             </ScrollView>
 
             {/* Modal detalle / historial */}
-            <Modal visible={!!detalleCliente} transparent animationType="slide">
+            <Modal visible={!!detalleCliente} transparent animationType="fade">
                 <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                     <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setDetalleCliente(null)}>
                         <TouchableOpacity activeOpacity={1} style={s.modalSheet}>

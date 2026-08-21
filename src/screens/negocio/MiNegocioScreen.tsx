@@ -267,7 +267,7 @@ export default function MiNegocioScreen({ onNavigate }: Props) {
             </ScrollView>
 
             {/* Modal editar negocio */}
-            <Modal visible={editandoNegocio} transparent animationType="slide">
+            <Modal visible={editandoNegocio} transparent animationType="fade">
                 <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                     <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setEditandoNegocio(false)}>
                         <TouchableOpacity activeOpacity={1} style={s.modalSheet}>

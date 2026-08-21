@@ -10,6 +10,7 @@ import SeleccionEmprendimientoScreen from '../screens/emprendimiento/CrearEmpren
 import { EmprendimientoProvider } from '../context/EmprendimientoContext';
 import { AppHeader } from '../components/ui/AppHeader';
 import { DrawerMenu } from '../components/ui/DrawerMenu';
+import { OnboardingOverlay } from '../components/ui/OnboardingOverlay';
 import { colors } from '../theme';
 import VentasScreen from '../screens/ventas/VentasScreen';
 import StockScreen from '../screens/stock/StockScreen';
@@ -22,7 +23,7 @@ import PerfilScreen from '../screens/perfil/PerfilScreen';
 const Stack = createNativeStackNavigator();
 
 function AppContent() {
-  const { emprendimientoActivo, loading, error, recargar } = useEmprendimiento();
+  const { emprendimientoActivo, loading, error, recargar, mostrarOnboarding, cerrarOnboarding } = useEmprendimiento();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeScreen, setActiveScreen] = useState('negocio');
 
@@ -73,7 +74,7 @@ const renderScreen = () => {
 
 return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <AppHeader onMenuPress={() => setDrawerOpen(true)} />
+      <AppHeader onMenuPress={() => setDrawerOpen(true)} activeScreen={activeScreen} />
       {renderScreen()}
       <DrawerMenu
         visible={drawerOpen}
@@ -81,6 +82,7 @@ return (
         onClose={() => setDrawerOpen(false)}
         onNavigate={(key) => setActiveScreen(key)}
       />
+      <OnboardingOverlay visible={mostrarOnboarding} onFinish={cerrarOnboarding} />
     </SafeAreaView>
   );
 }

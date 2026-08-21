@@ -137,6 +137,25 @@ export function StockIcon({ color = '#004532' }: { color?: string }) {
     );
 }
 
+export function HelpIcon({ color = '#004532' }: { color?: string }) {
+    return (
+        <Svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <Path
+                d="M11 20.1667C16.0626 20.1667 20.1667 16.0626 20.1667 11C20.1667 5.93743 16.0626 1.83333 11 1.83333C5.93743 1.83333 1.83333 5.93743 1.83333 11C1.83333 16.0626 5.93743 20.1667 11 20.1667Z"
+                stroke={color}
+                strokeWidth="1.6"
+            />
+            <Path
+                d="M8.325 8.25C8.325 6.99238 9.5165 6 11 6C12.4835 6 13.675 6.99238 13.675 8.25C13.675 9.42009 12.6529 10.3547 11.3187 10.4839C11.1427 10.5008 11 10.6425 11 10.8194V12.1667"
+                stroke={color}
+                strokeWidth="1.6"
+                strokeLinecap="round"
+            />
+            <Path d="M11 15.5833C11.5063 15.5833 11.9167 15.1729 11.9167 14.6667C11.9167 14.1604 11.5063 13.75 11 13.75C10.4937 13.75 10.0833 14.1604 10.0833 14.6667C10.0833 15.1729 10.4937 15.5833 11 15.5833Z" fill={color} />
+        </Svg>
+    );
+}
+
 export function CloseIcon({ color = '#004532' }: { color?: string }) {
     return (
         <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
